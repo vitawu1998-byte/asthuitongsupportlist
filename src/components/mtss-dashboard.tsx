@@ -1,209 +1,131 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileDown, GripVertical, Search } from "lucide-react";
+import { StudentProfileDialog } from "@/components/student-profile";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Plus, Trash2, FileDown, GripVertical, StickyNote, Upload, ArrowLeft } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+  loadStudents,
+  saveStudents,
+  subjectsFor,
+  SUBJECT_LABEL,
+  highestTier,
+  type ClassInfo,
+  type Student,
+  type Subject,
+  type Tier,
+} from "@/lib/mtss-data";
 
-type Tier = "tier1" | "tier2" | "tier3" | "unassigned";
-
-type Student = {
-  id: string;
-  name: string;
-  tier: Tier;
-  notes: string;
-};
-
-const STORAGE_PREFIX = "mtss-students-v1::";
-
-const TIERS: { id: Tier; label: string; sub: string; tone: string }[] = [
-  {
-    id: "tier3",
-    label: "Tier 3",
-    sub: "Intensive · Individualized",
-    tone: "bg-tier3 text-tier3-foreground border-tier3",
-  },
-  {
-    id: "tier2",
-    label: "Tier 2",
-    sub: "Targeted · Small group",
-    tone: "bg-tier2 text-tier2-foreground border-tier2",
-  },
-  {
-    id: "tier1",
-    label: "Tier 1",
-    sub: "Universal · Core instruction",
-    tone: "bg-tier1 text-tier1-foreground border-tier1",
-  },
+const TIERS: { id: Tier; label: string; sub: string; width: string; tone: string }[] = [
+  { id: "tier3", label: "Tier 3", sub: "Intensive · Individualized", width: "w-[45%]", tone: "bg-tier3 text-tier3-foreground border-tier3" },
+  { id: "tier2", label: "Tier 2", sub: "Targeted · Small group", width: "w-[72%]", tone: "bg-tier2 text-tier2-foreground border-tier2" },
+  { id: "tier1", label: "Tier 1", sub: "Universal · Core instruction", width: "w-[100%]", tone: "bg-tier1 text-tier1-foreground border-tier1" },
 ];
 
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-export function MTSSDashboard({ classId, className }: { classId: string; className: string }) {
-  const STORAGE_KEY = STORAGE_PREFIX + classId;
-  const [students, setStudents] = useState<Student[]>([]);
-  const [name, setName] = useState("");
+export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
+  const subjects = subjectsFor(classInfo.band);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [activeSubject, setActiveSubject] = useState<Subject>(subjects[0]);
+  const [search, setSearch] = useState("");
+  const [tierFilter, setTierFilter] = useState<"all" | Tier>("all");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overTier, setOverTier] = useState<Tier | null>(null);
-  const [noteStudent, setNoteStudent] = useState<Student | null>(null);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkText, setBulkText] = useState("");
+  const [profileId, setProfileId] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      setStudents(raw ? JSON.parse(raw) : []);
-    } catch {}
-  }, [STORAGE_KEY]);
+    setAllStudents(loadStudents());
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-  }, [students, STORAGE_KEY]);
-
-  const addStudent = () => {
-    const n = name.trim();
-    if (!n) return;
-    setStudents((s) => [...s, { id: uid(), name: n, tier: "unassigned", notes: "" }]);
-    setName("");
+  const updateStudents = (next: Student[]) => {
+    setAllStudents(next);
+    saveStudents(next);
   };
 
-  const bulkImport = () => {
-    const names = bulkText
-      .split(/[\n,;\t]+/)
-      .map((x) => x.replace(/^\s*\d+[.)\s-]+/, "").trim())
-      .filter((x) => x.length > 0);
-    if (!names.length) return;
-    setStudents((s) => {
-      const existing = new Set(s.map((x) => x.name.toLowerCase()));
-      const toAdd = names
-        .filter((n) => {
-          const k = n.toLowerCase();
-          if (existing.has(k)) return false;
-          existing.add(k);
-          return true;
-        })
-        .map((n) => ({ id: uid(), name: n, tier: "unassigned" as Tier, notes: "" }));
-      return [...s, ...toAdd];
-    });
-    setBulkText("");
-    setBulkOpen(false);
-  };
+  const classStudents = useMemo(
+    () => allStudents.filter((s) => s.classId === classInfo.id),
+    [allStudents, classInfo.id],
+  );
 
-  const removeStudent = (id: string) =>
-    setStudents((s) => s.filter((x) => x.id !== id));
-
-  const moveToTier = (id: string, tier: Tier) =>
-    setStudents((s) => s.map((x) => (x.id === id ? { ...x, tier } : x)));
-
-  const openNotes = (s: Student) => {
-    setNoteStudent(s);
-    setNoteDraft(s.notes);
-  };
-
-  const saveNotes = () => {
-    if (!noteStudent) return;
-    setStudents((s) =>
-      s.map((x) => (x.id === noteStudent.id ? { ...x, notes: noteDraft } : x))
+  const moveToTier = (id: string, tier: Tier) => {
+    updateStudents(
+      allStudents.map((s) =>
+        s.id === id ? { ...s, tiers: { ...s.tiers, [activeSubject]: tier } } : s,
+      ),
     );
-    setNoteStudent(null);
   };
 
-  const counts = useMemo(() => {
-    const total = students.length || 1;
-    const by = (t: Tier) => students.filter((s) => s.tier === t).length;
-    return {
-      total: students.length,
-      tier1: by("tier1"),
-      tier2: by("tier2"),
-      tier3: by("tier3"),
-      unassigned: by("unassigned"),
-      pct: (t: Tier) => Math.round((by(t) / total) * 100),
-    };
-  }, [students]);
+  const tierOf = (s: Student): Tier => s.tiers[activeSubject] ?? "tier1";
+
+  const filtered = useMemo(() => {
+    return classStudents.filter((s) => {
+      if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (tierFilter !== "all" && tierOf(s) !== tierFilter) return false;
+      return true;
+    });
+  }, [classStudents, search, tierFilter, activeSubject]);
+
+  const sortedList = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+
+  const profileStudent = allStudents.find((s) => s.id === profileId) ?? null;
 
   const exportPDF = () => {
     const doc = new jsPDF();
     const now = new Date().toLocaleString();
     doc.setFontSize(18);
-    doc.text("MTSS Student Tracking Report", 14, 18);
+    doc.text(`MTSS Report — Class ${classInfo.name}`, 14, 18);
     doc.setFontSize(10);
     doc.setTextColor(110);
-    doc.text(`Generated ${now}`, 14, 25);
+    doc.text(`Huitong School · Generated ${now}`, 14, 25);
     doc.setTextColor(0);
-
     doc.setFontSize(12);
-    doc.text(`Total students: ${counts.total}`, 14, 36);
-    doc.text(
-      `Tier 1: ${counts.tier1} (${counts.pct("tier1")}%)   Tier 2: ${counts.tier2} (${counts.pct("tier2")}%)   Tier 3: ${counts.tier3} (${counts.pct("tier3")}%)`,
-      14,
-      44
-    );
+    doc.text(`Total students: ${classStudents.length}`, 14, 35);
 
-    let y = 56;
-    (["tier3", "tier2", "tier1", "unassigned"] as Tier[]).forEach((t) => {
-      const label =
-        t === "unassigned" ? "Unassigned" : t === "tier1" ? "Tier 1" : t === "tier2" ? "Tier 2" : "Tier 3";
-      const list = students.filter((s) => s.tier === t);
-      if (!list.length) return;
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
+    let y = 46;
+    subjects.forEach((subj) => {
+      if (y > 260) { doc.addPage(); y = 20; }
       doc.setFontSize(14);
-      doc.text(label, 14, y);
+      doc.text(SUBJECT_LABEL[subj], 14, y);
       y += 7;
-      doc.setFontSize(11);
-      list.forEach((s) => {
-        if (y > 275) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(`• ${s.name}`, 18, y);
-        y += 6;
-        if (s.notes.trim()) {
-          const lines = doc.splitTextToSize(`Notes: ${s.notes}`, 175);
-          doc.setFontSize(9);
-          doc.setTextColor(90);
-          lines.forEach((ln: string) => {
-            if (y > 280) {
-              doc.addPage();
-              y = 20;
-            }
-            doc.text(ln, 22, y);
-            y += 5;
-          });
-          doc.setFontSize(11);
-          doc.setTextColor(0);
-        }
-        y += 2;
+      (["tier3", "tier2", "tier1"] as Tier[]).forEach((t) => {
+        const list = classStudents.filter((s) => (s.tiers[subj] ?? "tier1") === t);
+        if (!list.length) return;
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFontSize(11);
+        doc.setTextColor(80);
+        const label = t === "tier1" ? "Tier 1" : t === "tier2" ? "Tier 2" : "Tier 3";
+        doc.text(`${label} (${list.length})`, 18, y);
+        doc.setTextColor(0);
+        y += 5;
+        doc.setFontSize(10);
+        list.forEach((s) => {
+          if (y > 280) { doc.addPage(); y = 20; }
+          doc.text(`• ${s.name}`, 22, y);
+          y += 5;
+        });
+        y += 3;
       });
       y += 4;
     });
 
-    doc.save(`mtss-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+    doc.save(`mtss-${classInfo.name}-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  const unassigned = students.filter((s) => s.tier === "unassigned");
-
-  // Pyramid widths (Tier 3 narrow at top, Tier 1 wide at base)
-  const pyramidWidths: Record<Tier, string> = {
-    tier3: "w-[45%]",
-    tier2: "w-[72%]",
-    tier1: "w-[100%]",
-    unassigned: "",
-  };
+  const counts = useMemo(() => {
+    const total = classStudents.length || 1;
+    const by = (t: Tier) => classStudents.filter((s) => tierOf(s) === t).length;
+    return {
+      total: classStudents.length,
+      tier1: by("tier1"),
+      tier2: by("tier2"),
+      tier3: by("tier3"),
+      pct: (t: Tier) => Math.round((by(t) / total) * 100),
+    };
+  }, [classStudents, activeSubject]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -213,186 +135,155 @@ export function MTSSDashboard({ classId, className }: { classId: string; classNa
             <Link to="/" className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-3 w-3" /> All classes
             </Link>
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{className}</h1>
-            <p className="text-sm text-muted-foreground">
-              MTSS · drag students into tiers
-            </p>
+            <div className="flex items-baseline gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Class <span className="text-primary">{classInfo.name}</span>
+              </h1>
+              <span className="text-sm text-muted-foreground">Grade {classInfo.grade} · {classInfo.band === "lower" ? "Lower School" : "Middle School"}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">MTSS support tracking by subject — drag students between tiers.</p>
           </div>
-          <Button onClick={exportPDF} disabled={students.length === 0}>
+          <Button onClick={exportPDF} disabled={classStudents.length === 0}>
             <FileDown className="mr-2 h-4 w-4" />
             Export PDF
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-6 py-6 lg:grid-cols-[320px_1fr]">
-        {/* Sidebar */}
-        <aside className="space-y-4">
-          <Card className="p-4">
-            <h2 className="mb-3 text-sm font-semibold">Add students</h2>
-            <div className="mb-2 flex gap-2">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addStudent()}
-                placeholder="Student name"
-              />
-              <Button size="icon" onClick={addStudent} aria-label="Add">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button variant="outline" size="sm" className="w-full" onClick={() => setBulkOpen(true)}>
-              <Upload className="mr-2 h-3.5 w-3.5" />
-              Bulk import names
-            </Button>
-          </Card>
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        <Tabs value={activeSubject} onValueChange={(v) => setActiveSubject(v as Subject)}>
+          <TabsList className="mb-4">
+            {subjects.map((s) => (
+              <TabsTrigger key={s} value={s}>
+                {SUBJECT_LABEL[s]} MTSS
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-          <Card className="p-4">
-            <h2 className="mb-3 text-sm font-semibold">
-              Unassigned <span className="text-muted-foreground">({unassigned.length})</span>
-            </h2>
-            <div
-              className={`min-h-[120px] rounded-md border-2 border-dashed p-2 transition-colors ${
-                overTier === "unassigned" ? "border-primary bg-accent" : "border-border"
-              }`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setOverTier("unassigned");
-              }}
-              onDragLeave={() => setOverTier(null)}
-              onDrop={() => {
-                if (dragId) moveToTier(dragId, "unassigned");
-                setDragId(null);
-                setOverTier(null);
-              }}
-            >
-              {unassigned.length === 0 && (
-                <p className="px-1 py-2 text-xs text-muted-foreground">
-                  Add a student above to begin.
-                </p>
-              )}
-              <div className="space-y-2">
-                {unassigned.map((s) => (
-                  <StudentChip
-                    key={s.id}
-                    s={s}
-                    onDragStart={() => setDragId(s.id)}
-                    onNotes={() => openNotes(s)}
-                    onRemove={() => removeStudent(s.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <h2 className="mb-3 text-sm font-semibold">Distribution</h2>
-            <Stat label="Total" value={counts.total} />
-            <Stat label="Tier 1" value={`${counts.tier1} · ${counts.pct("tier1")}%`} dot="bg-tier1" />
-            <Stat label="Tier 2" value={`${counts.tier2} · ${counts.pct("tier2")}%`} dot="bg-tier2" />
-            <Stat label="Tier 3" value={`${counts.tier3} · ${counts.pct("tier3")}%`} dot="bg-tier3" />
-          </Card>
-        </aside>
-
-        {/* Pyramid */}
-        <section className="space-y-3">
-          {TIERS.map((t) => {
-            const list = students.filter((s) => s.tier === t.id);
-            const pct = counts.pct(t.id);
-            return (
-              <div key={t.id} className="flex justify-center">
-                <div
-                  className={`${pyramidWidths[t.id]} rounded-xl border-2 p-4 transition-all ${t.tone} ${
-                    overTier === t.id ? "ring-4 ring-offset-2 ring-primary/40 scale-[1.01]" : ""
-                  }`}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setOverTier(t.id);
-                  }}
-                  onDragLeave={() => setOverTier(null)}
-                  onDrop={() => {
-                    if (dragId) moveToTier(dragId, t.id);
-                    setDragId(null);
-                    setOverTier(null);
-                  }}
-                >
-                  <div className="mb-3 flex items-baseline justify-between gap-4">
-                    <div>
-                      <div className="text-lg font-bold leading-tight">{t.label}</div>
-                      <div className="text-xs opacity-80">{t.sub}</div>
-                    </div>
-                    <div className="text-right text-sm font-semibold">
-                      {list.length} {list.length === 1 ? "student" : "students"} · {pct}%
-                    </div>
-                  </div>
-                  <div className="min-h-[64px] rounded-md bg-background/50 p-2">
-                    {list.length === 0 ? (
-                      <p className="px-1 py-3 text-center text-xs opacity-70">
-                        Drag students here
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {list.map((s) => (
-                          <StudentChip
-                            key={s.id}
-                            s={s}
-                            compact
-                            onDragStart={() => setDragId(s.id)}
-                            onNotes={() => openNotes(s)}
-                            onRemove={() => removeStudent(s.id)}
-                          />
-                        ))}
+          {subjects.map((subj) => (
+            <TabsContent key={subj} value={subj} className="mt-0">
+              <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+                {/* Student list */}
+                <aside className="space-y-4">
+                  <Card className="p-4">
+                    <h2 className="mb-3 text-sm font-semibold">Students ({classStudents.length})</h2>
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Search student"
+                          className="pl-8"
+                        />
                       </div>
-                    )}
-                  </div>
-                </div>
+                      <Select value={tierFilter} onValueChange={(v) => setTierFilter(v as typeof tierFilter)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All tiers</SelectItem>
+                          <SelectItem value="tier1">Tier 1 only</SelectItem>
+                          <SelectItem value="tier2">Tier 2 only</SelectItem>
+                          <SelectItem value="tier3">Tier 3 only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="mt-3 max-h-[420px] space-y-1.5 overflow-auto pr-1">
+                      {classStudents.length === 0 && (
+                        <p className="px-1 py-6 text-center text-xs text-muted-foreground">
+                          No students yet. Use Bulk Import on the home page.
+                        </p>
+                      )}
+                      {sortedList.map((s) => (
+                        <StudentRow
+                          key={s.id}
+                          student={s}
+                          tier={tierOf(s)}
+                          onDragStart={() => setDragId(s.id)}
+                          onClick={() => setProfileId(s.id)}
+                        />
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card className="p-4">
+                    <h2 className="mb-3 text-sm font-semibold">{SUBJECT_LABEL[subj]} distribution</h2>
+                    <Stat label="Tier 1" value={`${counts.tier1} · ${counts.pct("tier1")}%`} dot="bg-tier1" />
+                    <Stat label="Tier 2" value={`${counts.tier2} · ${counts.pct("tier2")}%`} dot="bg-tier2" />
+                    <Stat label="Tier 3" value={`${counts.tier3} · ${counts.pct("tier3")}%`} dot="bg-tier3" />
+                  </Card>
+                </aside>
+
+                {/* Pyramid */}
+                <section className="space-y-3">
+                  {TIERS.map((t) => {
+                    const list = classStudents.filter((s) => tierOf(s) === t.id);
+                    const pct = counts.pct(t.id);
+                    return (
+                      <div key={t.id} className="flex justify-center">
+                        <div
+                          className={`${t.width} rounded-xl border-2 p-4 transition-all ${t.tone} ${
+                            overTier === t.id ? "ring-4 ring-offset-2 ring-primary/40 scale-[1.005]" : ""
+                          }`}
+                          onDragOver={(e) => { e.preventDefault(); setOverTier(t.id); }}
+                          onDragLeave={() => setOverTier(null)}
+                          onDrop={() => {
+                            if (dragId) moveToTier(dragId, t.id);
+                            setDragId(null);
+                            setOverTier(null);
+                          }}
+                        >
+                          <div className="mb-3 flex items-baseline justify-between gap-4">
+                            <div>
+                              <div className="text-lg font-bold leading-tight">{t.label}</div>
+                              <div className="text-xs opacity-80">{t.sub}</div>
+                            </div>
+                            <div className="text-right text-sm font-semibold">
+                              {list.length} {list.length === 1 ? "student" : "students"} · {pct}%
+                            </div>
+                          </div>
+                          <div className="min-h-[64px] rounded-md bg-background/60 p-2">
+                            {list.length === 0 ? (
+                              <p className="px-1 py-3 text-center text-xs opacity-70">Drag students here</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                {list.map((s) => (
+                                  <button
+                                    key={s.id}
+                                    draggable
+                                    onDragStart={() => setDragId(s.id)}
+                                    onClick={() => setProfileId(s.id)}
+                                    className="group flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 text-sm text-card-foreground shadow-sm active:cursor-grabbing"
+                                  >
+                                    <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="font-medium">{s.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </section>
               </div>
-            );
-          })}
-        </section>
+            </TabsContent>
+          ))}
+        </Tabs>
       </main>
 
-      <Dialog open={!!noteStudent} onOpenChange={(o) => !o && setNoteStudent(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Intervention notes — {noteStudent?.name}</DialogTitle>
-          </DialogHeader>
-          <Textarea
-            value={noteDraft}
-            onChange={(e) => setNoteDraft(e.target.value)}
-            rows={8}
-            placeholder="Document interventions, progress monitoring, goals..."
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNoteStudent(null)}>
-              Cancel
-            </Button>
-            <Button onClick={saveNotes}>Save notes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk import students</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Paste a list of student names — one per line, or separated by commas / tabs.
-            Numbering like "1. Name" is automatically stripped. Duplicates are skipped.
-          </p>
-          <Textarea
-            value={bulkText}
-            onChange={(e) => setBulkText(e.target.value)}
-            rows={10}
-            placeholder={"Alice Chen\nBrian Park\nCarmen Diaz\n..."}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
-            <Button onClick={bulkImport}>Import</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StudentProfileDialog
+        student={profileStudent}
+        classInfo={classInfo}
+        onClose={() => setProfileId(null)}
+        onSave={(updated) => {
+          updateStudents(allStudents.map((s) => (s.id === updated.id ? updated : s)));
+        }}
+        onDelete={(id) => {
+          updateStudents(allStudents.filter((s) => s.id !== id));
+          setProfileId(null);
+        }}
+      />
     </div>
   );
 }
@@ -409,46 +300,40 @@ function Stat({ label, value, dot }: { label: string; value: React.ReactNode; do
   );
 }
 
-function StudentChip({
-  s,
-  compact,
+function StudentRow({
+  student,
+  tier,
   onDragStart,
-  onNotes,
-  onRemove,
+  onClick,
 }: {
-  s: Student;
-  compact?: boolean;
+  student: Student;
+  tier: Tier;
   onDragStart: () => void;
-  onNotes: () => void;
-  onRemove: () => void;
+  onClick: () => void;
 }) {
+  const tierTone =
+    tier === "tier1" ? "bg-tier1/15 text-tier1-foreground" :
+    tier === "tier2" ? "bg-tier2/25 text-tier2-foreground" :
+    "bg-tier3/15 text-tier3";
+  const overall = highestTier(student);
   return (
     <div
       draggable
       onDragStart={onDragStart}
-      className={`group flex cursor-grab items-center gap-1.5 rounded-md border bg-card text-card-foreground shadow-sm active:cursor-grabbing ${
-        compact ? "px-2 py-1 text-sm" : "px-2 py-1.5"
-      }`}
+      onClick={onClick}
+      className="group flex cursor-grab items-center gap-2 rounded-md border bg-card px-2 py-1.5 text-sm hover:bg-accent/30 active:cursor-grabbing"
     >
       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-      <span className="flex-1 truncate font-medium">{s.name}</span>
-      {s.notes.trim() && (
-        <span className="h-1.5 w-1.5 rounded-full bg-primary" title="Has notes" />
+      <span className="flex-1 truncate font-medium">{student.name}</span>
+      <Badge variant="secondary" className={`text-[10px] ${tierTone}`}>
+        {tier === "tier1" ? "T1" : tier === "tier2" ? "T2" : "T3"}
+      </Badge>
+      {overall !== "tier1" && overall !== tier && (
+        <span
+          className="h-1.5 w-1.5 rounded-full bg-destructive"
+          title={`Also in ${overall === "tier3" ? "Tier 3" : "Tier 2"} for another subject`}
+        />
       )}
-      <button
-        onClick={onNotes}
-        className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-accent hover:text-foreground group-hover:opacity-100"
-        aria-label="Edit notes"
-      >
-        <StickyNote className="h-3.5 w-3.5" />
-      </button>
-      <button
-        onClick={onRemove}
-        className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
-        aria-label="Remove"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
     </div>
   );
 }
