@@ -1,18 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MTSSDashboard } from "@/components/mtss-dashboard";
+import { ClassesPage } from "@/components/classes-page";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MTSS Student Tracking Dashboard" },
-      { name: "description", content: "Track student tiers, interventions, and export MTSS reports." },
-      { property: "og:title", content: "MTSS Student Tracking Dashboard" },
-      { property: "og:description", content: "Track student tiers, interventions, and export MTSS reports." },
+      { title: "Classes — MTSS Student Tracking" },
+      { name: "description", content: "Select a class to track MTSS student tiers and interventions." },
+      { property: "og:title", content: "Classes — MTSS Student Tracking" },
+      { property: "og:description", content: "Select a class to track MTSS student tiers and interventions." },
     ],
   }),
   component: Index,
 });
 
 function Index() {
-  return <MTSSDashboard />;
+  return <ClassesPage />;
 }

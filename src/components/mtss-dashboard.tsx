@@ -11,7 +11,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, FileDown, GripVertical, StickyNote } from "lucide-react";
+import { Plus, Trash2, FileDown, GripVertical, StickyNote, Upload, ArrowLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 type Tier = "tier1" | "tier2" | "tier3" | "unassigned";
 
@@ -22,7 +23,7 @@ type Student = {
   notes: string;
 };
 
-const STORAGE_KEY = "mtss-students-v1";
+const STORAGE_PREFIX = "mtss-students-v1::";
 
 const TIERS: { id: Tier; label: string; sub: string; tone: string }[] = [
   {
@@ -49,30 +50,55 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function MTSSDashboard() {
+export function MTSSDashboard({ classId, className }: { classId: string; className: string }) {
+  const STORAGE_KEY = STORAGE_PREFIX + classId;
   const [students, setStudents] = useState<Student[]>([]);
   const [name, setName] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overTier, setOverTier] = useState<Tier | null>(null);
   const [noteStudent, setNoteStudent] = useState<Student | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setStudents(JSON.parse(raw));
+      setStudents(raw ? JSON.parse(raw) : []);
     } catch {}
-  }, []);
+  }, [STORAGE_KEY]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-  }, [students]);
+  }, [students, STORAGE_KEY]);
 
   const addStudent = () => {
     const n = name.trim();
     if (!n) return;
     setStudents((s) => [...s, { id: uid(), name: n, tier: "unassigned", notes: "" }]);
     setName("");
+  };
+
+  const bulkImport = () => {
+    const names = bulkText
+      .split(/[\n,;\t]+/)
+      .map((x) => x.replace(/^\s*\d+[.)\s-]+/, "").trim())
+      .filter((x) => x.length > 0);
+    if (!names.length) return;
+    setStudents((s) => {
+      const existing = new Set(s.map((x) => x.name.toLowerCase()));
+      const toAdd = names
+        .filter((n) => {
+          const k = n.toLowerCase();
+          if (existing.has(k)) return false;
+          existing.add(k);
+          return true;
+        })
+        .map((n) => ({ id: uid(), name: n, tier: "unassigned" as Tier, notes: "" }));
+      return [...s, ...toAdd];
+    });
+    setBulkText("");
+    setBulkOpen(false);
   };
 
   const removeStudent = (id: string) =>
@@ -182,11 +208,14 @@ export function MTSSDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">MTSS Student Tracking</h1>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
+          <div className="min-w-0">
+            <Link to="/" className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-3 w-3" /> All classes
+            </Link>
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{className}</h1>
             <p className="text-sm text-muted-foreground">
-              Multi-Tiered System of Supports · drag students into tiers
+              MTSS · drag students into tiers
             </p>
           </div>
           <Button onClick={exportPDF} disabled={students.length === 0}>
@@ -200,8 +229,8 @@ export function MTSSDashboard() {
         {/* Sidebar */}
         <aside className="space-y-4">
           <Card className="p-4">
-            <h2 className="mb-3 text-sm font-semibold">Add student</h2>
-            <div className="flex gap-2">
+            <h2 className="mb-3 text-sm font-semibold">Add students</h2>
+            <div className="mb-2 flex gap-2">
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -212,6 +241,10 @@ export function MTSSDashboard() {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setBulkOpen(true)}>
+              <Upload className="mr-2 h-3.5 w-3.5" />
+              Bulk import names
+            </Button>
           </Card>
 
           <Card className="p-4">
@@ -335,6 +368,28 @@ export function MTSSDashboard() {
               Cancel
             </Button>
             <Button onClick={saveNotes}>Save notes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk import students</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Paste a list of student names — one per line, or separated by commas / tabs.
+            Numbering like "1. Name" is automatically stripped. Duplicates are skipped.
+          </p>
+          <Textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            rows={10}
+            placeholder={"Alice Chen\nBrian Park\nCarmen Diaz\n..."}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
+            <Button onClick={bulkImport}>Import</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
