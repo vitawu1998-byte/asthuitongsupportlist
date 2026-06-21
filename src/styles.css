@@ -46,6 +46,12 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
+  --color-tier1: var(--tier1);
+  --color-tier1-foreground: var(--tier1-foreground);
+  --color-tier2: var(--tier2);
+  --color-tier2-foreground: var(--tier2-foreground);
+  --color-tier3: var(--tier3);
+  --color-tier3-foreground: var(--tier3-foreground);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
