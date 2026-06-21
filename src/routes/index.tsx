@@ -4,10 +4,10 @@ import { ClassesPage } from "@/components/classes-page";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Classes — MTSS Student Tracking" },
-      { name: "description", content: "Select a class to track MTSS student tiers and interventions." },
-      { property: "og:title", content: "Classes — MTSS Student Tracking" },
-      { property: "og:description", content: "Select a class to track MTSS student tiers and interventions." },
+      { title: "Huitong School — MTSS Dashboard" },
+      { name: "description", content: "Multi-Tiered Systems of Support tracking across all Huitong School advisory classes." },
+      { property: "og:title", content: "Huitong School — MTSS Dashboard" },
+      { property: "og:description", content: "Multi-Tiered Systems of Support tracking across all Huitong School advisory classes." },
     ],
   }),
   component: Index,
