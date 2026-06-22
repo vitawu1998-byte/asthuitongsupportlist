@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
@@ -16,28 +16,20 @@ import { GraduationCap, Users, ArrowRight, Upload, FileSpreadsheet } from "lucid
 import {
   CLASSES,
   STUDENTS_KEY,
-  loadStudents,
-  saveStudents,
   resolveClassId,
   uid,
   highestTier,
   type Student,
   type ClassInfo,
 } from "@/lib/mtss-data";
+import { useStudents, upsertStudents } from "@/lib/use-students";
 
 export function ClassesPage() {
-  const [students, setStudents] = useState<Student[]>([]);
+  const students = useStudents();
   const [importOpen, setImportOpen] = useState(false);
   const [importLog, setImportLog] = useState<string[]>([]);
   const [importPreview, setImportPreview] = useState<{ added: number; skipped: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setStudents(loadStudents());
-    const onStorage = () => setStudents(loadStudents());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
 
   const byClass = useMemo(() => {
     const map = new Map<string, Student[]>();
@@ -61,8 +53,7 @@ export function ClassesPage() {
       const wb = XLSX.read(buf, { type: "array" });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-      const existing = loadStudents();
-      const existingKey = new Set(existing.map((s) => `${s.classId}::${s.name.toLowerCase()}`));
+      const existingKey = new Set(students.map((s) => `${s.classId}::${s.name.toLowerCase()}`));
       const toAdd: Student[] = [];
 
       for (const row of rows) {
@@ -107,9 +98,7 @@ export function ClassesPage() {
         });
         added++;
       }
-      const next = [...existing, ...toAdd];
-      saveStudents(next);
-      setStudents(next);
+      await upsertStudents(toAdd);
       setImportPreview({ added, skipped });
       setImportLog(log);
     } catch (e) {
