@@ -27,7 +27,7 @@ async function initialLoad() {
     console.error("Load students failed:", error);
     return;
   }
-  cache = (data as StudentRow[]).map(rowToStudent);
+  cache = (data as unknown as StudentRow[]).map(rowToStudent);
   loaded = true;
   emit();
 }
@@ -46,7 +46,7 @@ function startRealtime() {
           if (!id) return;
           cache = cache.filter((s) => s.id !== id);
         } else {
-          const row = payload.new as StudentRow;
+          const row = payload.new as unknown as StudentRow;
           const s = rowToStudent(row);
           const idx = cache.findIndex((x) => x.id === s.id);
           if (idx === -1) cache = [...cache, s];
@@ -88,7 +88,7 @@ export async function upsertStudent(s: Student) {
     cache = next;
   }
   emit();
-  const { error } = await supabase.from("students").upsert(studentToRow(s));
+  const { error } = await supabase.from("students").upsert(studentToRow(s) as never);
   if (error) console.error("Save student failed:", error);
 }
 
@@ -98,7 +98,7 @@ export async function upsertStudents(list: Student[]) {
   for (const s of list) byId.set(s.id, s);
   cache = Array.from(byId.values());
   emit();
-  const { error } = await supabase.from("students").upsert(list.map(studentToRow));
+  const { error } = await supabase.from("students").upsert(list.map(studentToRow) as never);
   if (error) console.error("Save students failed:", error);
 }
 
