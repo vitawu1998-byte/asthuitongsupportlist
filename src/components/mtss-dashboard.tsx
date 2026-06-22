@@ -424,6 +424,58 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
           setProfileId(null);
         }}
       />
+
+      <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { setAddText(""); setAddResult(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add students to Class {classInfo.name}</DialogTitle>
+            <DialogDescription>
+              Paste a list of names (one per line, or separated by commas) — numbering like "1." is removed automatically.
+              Or upload a roster file and we'll auto-detect names from the first column.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Textarea
+              value={addText}
+              onChange={(e) => setAddText(e.target.value)}
+              rows={8}
+              placeholder={"张三\n李四\nWang Wei\n..."}
+            />
+            <div className="flex items-center gap-2">
+              <Button onClick={handleAddFromText} disabled={!addText.trim()}>
+                Add from list
+              </Button>
+              <span className="text-xs text-muted-foreground">or</span>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv,.txt"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleNameFile(f);
+                  e.target.value = "";
+                }}
+              />
+              <Button variant="outline" onClick={() => fileRef.current?.click()}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Upload file
+              </Button>
+            </div>
+            {addResult && (
+              <div className="rounded-md bg-muted p-3 text-sm">
+                <span className="font-semibold">{addResult.added}</span> added,{" "}
+                <span className="font-semibold">{addResult.skipped}</span> skipped (duplicates).
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
