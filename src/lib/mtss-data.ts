@@ -10,6 +10,7 @@ export type Student = {
   concerns: string[];
   interventions: Intervention[];
   notes: Note[];
+  watch?: boolean;
   createdAt: number;
 };
 
