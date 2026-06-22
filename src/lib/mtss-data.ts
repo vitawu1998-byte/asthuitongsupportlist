@@ -97,17 +97,48 @@ export function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function loadStudents(): Student[] {
-  try {
-    const raw = localStorage.getItem(STUDENTS_KEY);
-    return raw ? (JSON.parse(raw) as Student[]) : [];
-  } catch {
-    return [];
-  }
+// Row <-> Student mapping for the shared Supabase `students` table.
+export type StudentRow = {
+  id: string;
+  name: string;
+  grade: number;
+  class_id: string;
+  tiers: Partial<Record<Subject, Tier>>;
+  concerns: string[];
+  interventions: Intervention[];
+  notes: Note[];
+  watch: boolean;
+  created_at_ms: number;
+};
+
+export function rowToStudent(r: StudentRow): Student {
+  return {
+    id: r.id,
+    name: r.name,
+    grade: r.grade,
+    classId: r.class_id,
+    tiers: r.tiers ?? {},
+    concerns: r.concerns ?? [],
+    interventions: r.interventions ?? [],
+    notes: r.notes ?? [],
+    watch: !!r.watch,
+    createdAt: r.created_at_ms,
+  };
 }
 
-export function saveStudents(s: Student[]) {
-  localStorage.setItem(STUDENTS_KEY, JSON.stringify(s));
+export function studentToRow(s: Student): StudentRow {
+  return {
+    id: s.id,
+    name: s.name,
+    grade: s.grade,
+    class_id: s.classId,
+    tiers: s.tiers ?? {},
+    concerns: s.concerns ?? [],
+    interventions: s.interventions ?? [],
+    notes: s.notes ?? [],
+    watch: !!s.watch,
+    created_at_ms: s.createdAt,
+  };
 }
 
 export function findClass(id: string): ClassInfo | undefined {
