@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
@@ -20,8 +20,6 @@ import {
 import { ArrowLeft, FileDown, GripVertical, Search, UserPlus, Eye, X, FileSpreadsheet } from "lucide-react";
 import { StudentProfileDialog } from "@/components/student-profile";
 import {
-  loadStudents,
-  saveStudents,
   subjectsFor,
   SUBJECT_LABEL,
   highestTier,
@@ -31,6 +29,7 @@ import {
   type Subject,
   type Tier,
 } from "@/lib/mtss-data";
+import { useStudents, upsertStudent, upsertStudents, deleteStudent } from "@/lib/use-students";
 
 const TIERS: { id: Tier; label: string; sub: string; width: string; tone: string }[] = [
   { id: "tier3", label: "Tier 3", sub: "Intensive · Individualized", width: "w-[45%]", tone: "bg-tier3 text-tier3-foreground border-tier3" },
@@ -40,7 +39,7 @@ const TIERS: { id: Tier; label: string; sub: string; width: string; tone: string
 
 export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
   const subjects = subjectsFor(classInfo.band);
-  const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const allStudents = useStudents();
   const [activeSubject, setActiveSubject] = useState<Subject>(subjects[0]);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<"all" | Tier>("all");
@@ -52,30 +51,21 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
   const [addResult, setAddResult] = useState<{ added: number; skipped: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setAllStudents(loadStudents());
-  }, []);
-
-  const updateStudents = (next: Student[]) => {
-    setAllStudents(next);
-    saveStudents(next);
-  };
-
   const classStudents = useMemo(
     () => allStudents.filter((s) => s.classId === classInfo.id),
     [allStudents, classInfo.id],
   );
 
   const moveToTier = (id: string, tier: Tier) => {
-    updateStudents(
-      allStudents.map((s) =>
-        s.id === id ? { ...s, tiers: { ...s.tiers, [activeSubject]: tier }, watch: false } : s,
-      ),
-    );
+    const s = allStudents.find((x) => x.id === id);
+    if (!s) return;
+    upsertStudent({ ...s, tiers: { ...s.tiers, [activeSubject]: tier }, watch: false });
   };
 
   const setWatch = (id: string, watch: boolean) => {
-    updateStudents(allStudents.map((s) => (s.id === id ? { ...s, watch } : s)));
+    const s = allStudents.find((x) => x.id === id);
+    if (!s) return;
+    upsertStudent({ ...s, watch });
   };
 
   const parseNames = (raw: string): string[] => {
@@ -113,7 +103,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
       });
       added++;
     }
-    if (toAdd.length) updateStudents([...allStudents, ...toAdd]);
+    if (toAdd.length) upsertStudents(toAdd);
     setAddResult({ added, skipped });
   };
 
@@ -417,10 +407,10 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
         classInfo={classInfo}
         onClose={() => setProfileId(null)}
         onSave={(updated) => {
-          updateStudents(allStudents.map((s) => (s.id === updated.id ? updated : s)));
+          upsertStudent(updated);
         }}
         onDelete={(id) => {
-          updateStudents(allStudents.filter((s) => s.id !== id));
+          deleteStudent(id);
           setProfileId(null);
         }}
       />
