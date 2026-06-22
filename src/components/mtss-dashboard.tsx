@@ -520,6 +520,9 @@ function StudentRow({
       <Badge variant="secondary" className={`text-[10px] ${tierTone}`}>
         {tier === "tier1" ? "T1" : tier === "tier2" ? "T2" : "T3"}
       </Badge>
+      {student.watch && (
+        <Eye className="h-3 w-3 text-primary" />
+      )}
       {overall !== "tier1" && overall !== tier && (
         <span
           className="h-1.5 w-1.5 rounded-full bg-destructive"
