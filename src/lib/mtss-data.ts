@@ -14,20 +14,33 @@ export type Student = {
   createdAt: number;
 };
 
+export type Attachment = {
+  id: string;
+  name: string;
+  path: string;
+};
+
+export type NoteSubject = Subject | "other";
+
 export type Intervention = {
   id: string;
   name: string;
-  subject?: Subject;
+  subject?: NoteSubject;
+  otherSubject?: string;
   startDate: string;
-  reviewDate?: string;
+  supports: string[];
+  attachments: Attachment[];
   status: "Active" | "Monitoring" | "Successful" | "Escalated";
 };
 
 export type Note = {
   id: string;
   date: string;
+  subject?: NoteSubject;
+  otherSubject?: string;
   staff: string;
   text: string;
+  attachments: Attachment[];
 };
 
 export type ClassInfo = {
@@ -83,15 +96,39 @@ export const CONCERN_OPTIONS = {
 };
 
 export const INTERVENTION_OPTIONS = [
-  "Small Group Support",
-  "Push-in Support",
-  "Pull-out Support",
-  "Check-in Check-out",
-  "Parent Meeting",
-  "Reflection Sheet",
-  "Goal Setting",
-  "Academic Coaching",
+  "Small Group Support 小组支持",
+  "One-to-One Support 1对1支持",
+  "Push-in Support 随堂支持",
+  "Pull-out Support 抽离支持",
+  "Check-in Check-out 每日签到",
+  "Parent Meeting 家长会议",
+  "Reflection Sheet 反思表",
+  "Goal Setting 目标设定",
+  "Academic Coaching 学业辅导",
 ];
+
+// Checkbox list: what support was actually delivered
+export const SUPPORT_ACTIONS = [
+  "In-class content explanation 课堂内容讲解",
+  "Listening / attention reminders 听课提醒",
+  "Small group pull-out 小组 pull out",
+  "Individual pull-out 单独 pull out",
+  "Behavior intervention 行为干预",
+  "Homework / assignment support 作业辅导",
+  "Differentiated tasks 分层任务",
+  "Pre-teaching vocabulary 预教词汇",
+  "Seating / environment adjustment 座位调整",
+  "Assessment accommodation 考试调整",
+  "Emotional / social support 情绪支持",
+  "Parent communication 家长沟通",
+];
+
+export const NOTE_SUBJECT_LABEL: Record<NoteSubject, string> = {
+  english: "English 英语",
+  math: "Mathematics 数学",
+  science: "Science 科学",
+  other: "Other 其他",
+};
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10);
