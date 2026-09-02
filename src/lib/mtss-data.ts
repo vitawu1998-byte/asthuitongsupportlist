@@ -14,20 +14,33 @@ export type Student = {
   createdAt: number;
 };
 
+export type Attachment = {
+  id: string;
+  name: string;
+  path: string;
+};
+
+export type NoteSubject = Subject | "other";
+
 export type Intervention = {
   id: string;
   name: string;
-  subject?: Subject;
+  subject?: NoteSubject;
+  otherSubject?: string;
   startDate: string;
-  reviewDate?: string;
+  supports: string[];
+  attachments: Attachment[];
   status: "Active" | "Monitoring" | "Successful" | "Escalated";
 };
 
 export type Note = {
   id: string;
   date: string;
+  subject?: NoteSubject;
+  otherSubject?: string;
   staff: string;
   text: string;
+  attachments: Attachment[];
 };
 
 export type ClassInfo = {
