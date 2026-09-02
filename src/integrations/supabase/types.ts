@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      class_staff: {
+        Row: {
+          ast_teacher: string
+          class_id: string
+          created_at: string
+          lst_teacher: string
+          subject_teachers: Json
+          updated_at: string
+        }
+        Insert: {
+          ast_teacher?: string
+          class_id: string
+          created_at?: string
+          lst_teacher?: string
+          subject_teachers?: Json
+          updated_at?: string
+        }
+        Update: {
+          ast_teacher?: string
+          class_id?: string
+          created_at?: string
+          lst_teacher?: string
+          subject_teachers?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           class_id: string
