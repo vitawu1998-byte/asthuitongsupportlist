@@ -30,6 +30,7 @@ import {
   type Tier,
 } from "@/lib/mtss-data";
 import { useStudents, upsertStudent, upsertStudents, deleteStudent } from "@/lib/use-students";
+import { useClassStaff, saveClassStaff } from "@/lib/use-class-staff";
 
 const TIERS: { id: Tier; label: string; sub: string; width: string; tone: string }[] = [
   { id: "tier3", label: "Tier 3", sub: "Intensive · Individualized", width: "w-[45%]", tone: "bg-tier3 text-tier3-foreground border-tier3" },
