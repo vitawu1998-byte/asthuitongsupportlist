@@ -212,6 +212,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
     [classStudents],
   );
   const [overWatch, setOverWatch] = useState(false);
+  const [staff, setStaff] = useClassStaff(classInfo.id);
 
   return (
     <div className="min-h-screen bg-background">
