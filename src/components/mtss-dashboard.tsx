@@ -440,6 +440,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                       </div>
                     );
                   })}
+                  </div>
                 </section>
               </div>
             </TabsContent>
