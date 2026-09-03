@@ -133,6 +133,15 @@ export function StudentProfileDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <Section title="Advisor 导师">
+          <Input
+            value={draft.advisor ?? ""}
+            onChange={(e) => setDraft({ ...draft, advisor: e.target.value })}
+            placeholder="Advisor name"
+            className="max-w-sm"
+          />
+        </Section>
+
         <Section title="Subject support status">
           <div className="grid gap-3 sm:grid-cols-3">
             {subjects.map((subj) => {

@@ -17,6 +17,7 @@ export type Database = {
       class_staff: {
         Row: {
           ast_teacher: string
+          ast_teachers: Json
           class_id: string
           created_at: string
           lst_teacher: string
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           ast_teacher?: string
+          ast_teachers?: Json
           class_id: string
           created_at?: string
           lst_teacher?: string
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           ast_teacher?: string
+          ast_teachers?: Json
           class_id?: string
           created_at?: string
           lst_teacher?: string
@@ -43,6 +46,7 @@ export type Database = {
       }
       students: {
         Row: {
+          advisor: string
           class_id: string
           concerns: Json
           created_at_ms: number
@@ -56,6 +60,7 @@ export type Database = {
           watch: boolean
         }
         Insert: {
+          advisor?: string
           class_id: string
           concerns?: Json
           created_at_ms?: number
@@ -69,6 +74,7 @@ export type Database = {
           watch?: boolean
         }
         Update: {
+          advisor?: string
           class_id?: string
           concerns?: Json
           created_at_ms?: number

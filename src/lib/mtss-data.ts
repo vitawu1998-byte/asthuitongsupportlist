@@ -6,6 +6,7 @@ export type Student = {
   name: string;
   grade: number; // 1..8
   classId: string;
+  advisor?: string;
   tiers: Partial<Record<Subject, Tier>>;
   concerns: string[];
   interventions: Intervention[];
@@ -140,6 +141,7 @@ export type StudentRow = {
   name: string;
   grade: number;
   class_id: string;
+  advisor?: string;
   tiers: Partial<Record<Subject, Tier>>;
   concerns: string[];
   interventions: Intervention[];
@@ -154,6 +156,7 @@ export function rowToStudent(r: StudentRow): Student {
     name: r.name,
     grade: r.grade,
     classId: r.class_id,
+    advisor: r.advisor ?? "",
     tiers: r.tiers ?? {},
     concerns: r.concerns ?? [],
     interventions: r.interventions ?? [],
@@ -169,6 +172,7 @@ export function studentToRow(s: Student): StudentRow {
     name: s.name,
     grade: s.grade,
     class_id: s.classId,
+    advisor: s.advisor ?? "",
     tiers: s.tiers ?? {},
     concerns: s.concerns ?? [],
     interventions: s.interventions ?? [],
