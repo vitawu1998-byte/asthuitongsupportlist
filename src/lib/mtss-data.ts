@@ -6,6 +6,7 @@ export type Student = {
   name: string;
   grade: number; // 1..8
   classId: string;
+  advisor?: string;
   tiers: Partial<Record<Subject, Tier>>;
   concerns: string[];
   interventions: Intervention[];
