@@ -5,22 +5,25 @@ import type { Subject } from "./mtss-data";
 export type ClassStaff = {
   classId: string;
   subjectTeachers: Partial<Record<Subject, string>>;
-  astTeacher: string;
-  lstTeacher: string;
+  astTeachers: Partial<Record<Subject, string>>;
 };
 
 type Row = {
   class_id: string;
   subject_teachers: Partial<Record<Subject, string>> | null;
-  ast_teacher: string | null;
-  lst_teacher: string | null;
+  ast_teachers: Partial<Record<Subject, string>> | null;
 };
 
 const empty = (classId: string): ClassStaff => ({
   classId,
   subjectTeachers: {},
-  astTeacher: "",
-  lstTeacher: "",
+  astTeachers: {},
+});
+
+const fromRow = (classId: string, r: Row): ClassStaff => ({
+  classId,
+  subjectTeachers: r.subject_teachers ?? {},
+  astTeachers: r.ast_teachers ?? {},
 });
 
 export function useClassStaff(classId: string) {
@@ -36,13 +39,7 @@ export function useClassStaff(classId: string) {
         .eq("class_id", classId)
         .maybeSingle();
       if (!active || error || !data) return;
-      const r = data as unknown as Row;
-      setStaff({
-        classId,
-        subjectTeachers: r.subject_teachers ?? {},
-        astTeacher: r.ast_teacher ?? "",
-        lstTeacher: r.lst_teacher ?? "",
-      });
+      setStaff(fromRow(classId, data as unknown as Row));
     })();
 
     const channel = supabase
@@ -53,12 +50,7 @@ export function useClassStaff(classId: string) {
         (payload) => {
           const r = payload.new as unknown as Row | null;
           if (!r?.class_id) return;
-          setStaff({
-            classId,
-            subjectTeachers: r.subject_teachers ?? {},
-            astTeacher: r.ast_teacher ?? "",
-            lstTeacher: r.lst_teacher ?? "",
-          });
+          setStaff(fromRow(classId, r));
         },
       )
       .subscribe();
@@ -77,8 +69,7 @@ export async function saveClassStaff(s: ClassStaff) {
     {
       class_id: s.classId,
       subject_teachers: s.subjectTeachers,
-      ast_teacher: s.astTeacher,
-      lst_teacher: s.lstTeacher,
+      ast_teachers: s.astTeachers,
     } as never,
   );
   if (error) console.error("Save class staff failed:", error);
