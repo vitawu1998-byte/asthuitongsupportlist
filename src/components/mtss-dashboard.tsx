@@ -349,7 +349,47 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                 </aside>
 
                 {/* Pyramid */}
-                <section className="space-y-3">
+                <section className="space-y-4">
+                  <Card className="p-4">
+                    <h2 className="mb-3 text-sm font-semibold">Class teachers 班级教师</h2>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {subjects.map((sj) => (
+                        <div key={sj}>
+                          <label className="text-xs text-muted-foreground">{SUBJECT_LABEL[sj]} teacher</label>
+                          <Input
+                            value={staff.subjectTeachers[sj] ?? ""}
+                            onChange={(e) =>
+                              setStaff({
+                                ...staff,
+                                subjectTeachers: { ...staff.subjectTeachers, [sj]: e.target.value },
+                              })
+                            }
+                            onBlur={() => saveClassStaff(staff)}
+                            placeholder="Name"
+                          />
+                        </div>
+                      ))}
+                      <div>
+                        <label className="text-xs text-muted-foreground">AST teacher</label>
+                        <Input
+                          value={staff.astTeacher}
+                          onChange={(e) => setStaff({ ...staff, astTeacher: e.target.value })}
+                          onBlur={() => saveClassStaff(staff)}
+                          placeholder="Name"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">LST teacher</label>
+                        <Input
+                          value={staff.lstTeacher}
+                          onChange={(e) => setStaff({ ...staff, lstTeacher: e.target.value })}
+                          onBlur={() => saveClassStaff(staff)}
+                          placeholder="Name"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                  <div className="space-y-3">
                   {TIERS.map((t) => {
                     const list = classStudents.filter((s) => tierOf(s) === t.id);
                     const pct = counts.pct(t.id);
