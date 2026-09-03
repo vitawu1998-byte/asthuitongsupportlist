@@ -1,2 +1,2 @@
-- [ ] Class teachers: per-subject AST teacher field under English/Math/Science; remove LST teacher
-- [ ] Student profile: add Advisor field
+- [x] Class teachers: per-subject AST teacher field under English/Math/Science; remove LST teacher
+- [x] Student profile: add Advisor field
