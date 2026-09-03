@@ -51,9 +51,9 @@ export type ClassInfo = {
 };
 
 export const CLASSES: ClassInfo[] = [
-  // Lower School: grades 1-5, sections A & C
+  // Lower School: grades 1-5 (grade 5 also has section E)
   ...[1, 2, 3, 4, 5].flatMap((g) =>
-    ["A", "C"].map((s) => ({
+    (g === 5 ? ["A", "C", "E"] : ["A", "C"]).map((s) => ({
       id: `g${g}-${s}`,
       name: `${g}${s}`,
       grade: g,
