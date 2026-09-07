@@ -200,7 +200,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
 
   const counts = useMemo(() => {
     const total = classStudents.length || 1;
-    const by = (t: Tier) => classStudents.filter((s) => tierOf(s) === t).length;
+    const by = (t: Tier) => classStudents.filter((s) => tiersOf(s, activeSubject).includes(t)).length;
     return {
       total: classStudents.length,
       tier1: by("tier1"),
