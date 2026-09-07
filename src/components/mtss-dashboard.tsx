@@ -63,8 +63,15 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
   const moveToTier = (id: string, tier: Tier) => {
     const s = allStudents.find((x) => x.id === id);
     if (!s) return;
-    upsertStudent({ ...s, tiers: { ...s.tiers, [activeSubject]: tier }, watch: false });
+    upsertStudent({ ...s, tiers: withTier(s, activeSubject, tier, dropMode), watch: false });
   };
+
+  const removeFromTier = (id: string, tier: Tier) => {
+    const s = allStudents.find((x) => x.id === id);
+    if (!s) return;
+    upsertStudent({ ...s, tiers: withoutTier(s, activeSubject, tier) });
+  };
+
 
   const setWatch = (id: string, watch: boolean) => {
     const s = allStudents.find((x) => x.id === id);
