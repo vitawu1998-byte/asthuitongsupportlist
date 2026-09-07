@@ -290,7 +290,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                         <StudentRow
                           key={s.id}
                           student={s}
-                          tier={tierOf(s)}
+                          tiers={tiersFor(s)}
                           onDragStart={() => setDragId(s.id)}
                           onClick={() => setProfileId(s.id)}
                         />
