@@ -143,7 +143,7 @@ export type StudentRow = {
   grade: number;
   class_id: string;
   advisor?: string;
-  tiers: Partial<Record<Subject, Tier>>;
+  tiers: Partial<Record<Subject, Tier | Tier[]>>;
   concerns: string[];
   interventions: Intervention[];
   notes: Note[];
