@@ -7,7 +7,8 @@ export type Student = {
   grade: number; // 1..8
   classId: string;
   advisor?: string;
-  tiers: Partial<Record<Subject, Tier>>;
+  // A subject can hold one tier, or several (e.g. both Tier 2 and Tier 3).
+  tiers: Partial<Record<Subject, Tier | Tier[]>>;
   concerns: string[];
   interventions: Intervention[];
   notes: Note[];
@@ -142,7 +143,7 @@ export type StudentRow = {
   grade: number;
   class_id: string;
   advisor?: string;
-  tiers: Partial<Record<Subject, Tier>>;
+  tiers: Partial<Record<Subject, Tier | Tier[]>>;
   concerns: string[];
   interventions: Intervention[];
   notes: Note[];
@@ -200,10 +201,46 @@ export function resolveClassId(grade: number | string | undefined, klass: string
   return undefined;
 }
 
+// Normalize a subject's tier value (single or multiple) into a list.
+export function tiersOf(s: Student, subj: Subject): Tier[] {
+  const v = s.tiers?.[subj];
+  if (!v) return ["tier1"];
+  const arr = Array.isArray(v) ? v.filter(Boolean) : [v];
+  return arr.length ? Array.from(new Set(arr)) : ["tier1"];
+}
+
+export function hasTier(s: Student, subj: Subject, t: Tier): boolean {
+  return tiersOf(s, subj).includes(t);
+}
+
+// Returns a new tiers map with `t` set as the only tier (move) or added (keep others).
+export function withTier(
+  s: Student,
+  subj: Subject,
+  t: Tier,
+  mode: "move" | "add",
+): Partial<Record<Subject, Tier | Tier[]>> {
+  const current = tiersOf(s, subj);
+  let next: Tier[] = mode === "move" ? [t] : Array.from(new Set([...current, t]));
+  // Tier 1 is "universal": it cannot be combined with targeted tiers.
+  if (next.length > 1) next = next.filter((x) => x !== "tier1");
+  return { ...s.tiers, [subj]: next.length === 1 ? next[0] : next };
+}
+
+export function withoutTier(
+  s: Student,
+  subj: Subject,
+  t: Tier,
+): Partial<Record<Subject, Tier | Tier[]>> {
+  const next = tiersOf(s, subj).filter((x) => x !== t);
+  return { ...s.tiers, [subj]: next.length === 0 ? "tier1" : next.length === 1 ? next[0] : next };
+}
+
 export function highestTier(s: Student): Tier {
   const order: Tier[] = ["tier3", "tier2", "tier1"];
+  const all = Object.values(s.tiers ?? {}).flatMap((v) => (Array.isArray(v) ? v : [v]));
   for (const t of order) {
-    if (Object.values(s.tiers).some((v) => v === t)) return t;
+    if (all.some((v) => v === t)) return t;
   }
   return "tier1";
 }

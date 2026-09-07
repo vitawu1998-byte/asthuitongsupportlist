@@ -23,6 +23,9 @@ import {
   subjectsFor,
   SUBJECT_LABEL,
   highestTier,
+  tiersOf,
+  withTier,
+  withoutTier,
   uid,
   type ClassInfo,
   type Student,
@@ -46,6 +49,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
   const [tierFilter, setTierFilter] = useState<"all" | Tier>("all");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overTier, setOverTier] = useState<Tier | null>(null);
+  const [dropMode, setDropMode] = useState<"move" | "add">("move");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addText, setAddText] = useState("");
@@ -60,8 +64,15 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
   const moveToTier = (id: string, tier: Tier) => {
     const s = allStudents.find((x) => x.id === id);
     if (!s) return;
-    upsertStudent({ ...s, tiers: { ...s.tiers, [activeSubject]: tier }, watch: false });
+    upsertStudent({ ...s, tiers: withTier(s, activeSubject, tier, dropMode), watch: false });
   };
+
+  const removeFromTier = (id: string, tier: Tier) => {
+    const s = allStudents.find((x) => x.id === id);
+    if (!s) return;
+    upsertStudent({ ...s, tiers: withoutTier(s, activeSubject, tier) });
+  };
+
 
   const setWatch = (id: string, watch: boolean) => {
     const s = allStudents.find((x) => x.id === id);
@@ -139,12 +150,12 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
     }
   };
 
-  const tierOf = (s: Student): Tier => s.tiers[activeSubject] ?? "tier1";
+  const tiersFor = (s: Student): Tier[] => tiersOf(s, activeSubject);
 
   const filtered = useMemo(() => {
     return classStudents.filter((s) => {
       if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (tierFilter !== "all" && tierOf(s) !== tierFilter) return false;
+      if (tierFilter !== "all" && !tiersFor(s).includes(tierFilter)) return false;
       return true;
     });
   }, [classStudents, search, tierFilter, activeSubject]);
@@ -172,7 +183,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
       doc.text(SUBJECT_LABEL[subj], 14, y);
       y += 7;
       (["tier3", "tier2", "tier1"] as Tier[]).forEach((t) => {
-        const list = classStudents.filter((s) => (s.tiers[subj] ?? "tier1") === t);
+        const list = classStudents.filter((s) => tiersOf(s, subj).includes(t));
         if (!list.length) return;
         if (y > 270) { doc.addPage(); y = 20; }
         doc.setFontSize(11);
@@ -197,7 +208,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
 
   const counts = useMemo(() => {
     const total = classStudents.length || 1;
-    const by = (t: Tier) => classStudents.filter((s) => tierOf(s) === t).length;
+    const by = (t: Tier) => classStudents.filter((s) => tiersOf(s, activeSubject).includes(t)).length;
     return {
       total: classStudents.length,
       tier1: by("tier1"),
@@ -290,7 +301,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                         <StudentRow
                           key={s.id}
                           student={s}
-                          tier={tierOf(s)}
+                          tiers={tiersFor(s)}
                           onDragStart={() => setDragId(s.id)}
                           onClick={() => setProfileId(s.id)}
                         />
@@ -387,9 +398,26 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                       ))}
                     </div>
                   </Card>
+                  <div className="mb-2 flex flex-wrap items-center justify-end gap-2 text-xs">
+                    <span className="text-muted-foreground">Drag mode 拖拽模式:</span>
+                    <div className="inline-flex overflow-hidden rounded-md border">
+                      <button
+                        onClick={() => setDropMode("move")}
+                        className={`px-2 py-1 ${dropMode === "move" ? "bg-primary text-primary-foreground" : "bg-card"}`}
+                      >
+                        Move 移动
+                      </button>
+                      <button
+                        onClick={() => setDropMode("add")}
+                        className={`border-l px-2 py-1 ${dropMode === "add" ? "bg-primary text-primary-foreground" : "bg-card"}`}
+                      >
+                        Add 可重复
+                      </button>
+                    </div>
+                  </div>
                   <div className="space-y-3">
                   {TIERS.map((t) => {
-                    const list = classStudents.filter((s) => tierOf(s) === t.id);
+                    const list = classStudents.filter((s) => tiersOf(s, activeSubject).includes(t.id));
                     const pct = counts.pct(t.id);
                     return (
                       <div key={t.id} className="flex justify-center">
@@ -419,18 +447,31 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                               <p className="px-1 py-3 text-center text-xs opacity-70">Drag students here</p>
                             ) : (
                               <div className="flex flex-wrap gap-2">
-                                {list.map((s) => (
-                                  <button
-                                    key={s.id}
-                                    draggable
-                                    onDragStart={() => setDragId(s.id)}
-                                    onClick={() => setProfileId(s.id)}
-                                    className="group flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 text-sm text-card-foreground shadow-sm active:cursor-grabbing"
-                                  >
-                                    <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span className="font-medium">{s.name}</span>
-                                  </button>
-                                ))}
+                                {list.map((s) => {
+                                  const multi = tiersOf(s, activeSubject).length > 1;
+                                  return (
+                                    <div
+                                      key={s.id}
+                                      draggable
+                                      onDragStart={() => setDragId(s.id)}
+                                      className="group flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 text-sm text-card-foreground shadow-sm active:cursor-grabbing"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                                      <button className="font-medium" onClick={() => setProfileId(s.id)}>
+                                        {s.name}
+                                      </button>
+                                      {multi && (
+                                        <button
+                                          title="Remove from this tier"
+                                          onClick={() => removeFromTier(s.id, t.id)}
+                                          className="text-muted-foreground hover:text-destructive"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -528,18 +569,18 @@ function Stat({ label, value, dot }: { label: string; value: React.ReactNode; do
 
 function StudentRow({
   student,
-  tier,
+  tiers,
   onDragStart,
   onClick,
 }: {
   student: Student;
-  tier: Tier;
+  tiers: Tier[];
   onDragStart: () => void;
   onClick: () => void;
 }) {
-  const tierTone =
-    tier === "tier1" ? "bg-tier1/15 text-tier1-foreground" :
-    tier === "tier2" ? "bg-tier2/25 text-tier2-foreground" :
+  const toneFor = (t: Tier) =>
+    t === "tier1" ? "bg-tier1/15 text-tier1-foreground" :
+    t === "tier2" ? "bg-tier2/25 text-tier2-foreground" :
     "bg-tier3/15 text-tier3";
   const overall = highestTier(student);
   return (
@@ -551,13 +592,15 @@ function StudentRow({
     >
       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
       <span className="flex-1 truncate font-medium">{student.name}</span>
-      <Badge variant="secondary" className={`text-[10px] ${tierTone}`}>
-        {tier === "tier1" ? "T1" : tier === "tier2" ? "T2" : "T3"}
-      </Badge>
+      {tiers.map((t) => (
+        <Badge key={t} variant="secondary" className={`text-[10px] ${toneFor(t)}`}>
+          {t === "tier1" ? "T1" : t === "tier2" ? "T2" : "T3"}
+        </Badge>
+      ))}
       {student.watch && (
         <Eye className="h-3 w-3 text-primary" />
       )}
-      {overall !== "tier1" && overall !== tier && (
+      {overall !== "tier1" && !tiers.includes(overall) && (
         <span
           className="h-1.5 w-1.5 rounded-full bg-destructive"
           title={`Also in ${overall === "tier3" ? "Tier 3" : "Tier 2"} for another subject`}
