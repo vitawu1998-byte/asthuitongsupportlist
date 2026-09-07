@@ -139,12 +139,12 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
     }
   };
 
-  const tierOf = (s: Student): Tier => s.tiers[activeSubject] ?? "tier1";
+  const tiersFor = (s: Student): Tier[] => tiersOf(s, activeSubject);
 
   const filtered = useMemo(() => {
     return classStudents.filter((s) => {
       if (search && !s.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (tierFilter !== "all" && tierOf(s) !== tierFilter) return false;
+      if (tierFilter !== "all" && !tiersFor(s).includes(tierFilter)) return false;
       return true;
     });
   }, [classStudents, search, tierFilter, activeSubject]);
