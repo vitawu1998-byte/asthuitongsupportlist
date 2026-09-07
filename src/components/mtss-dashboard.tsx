@@ -390,9 +390,26 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                       ))}
                     </div>
                   </Card>
+                  <div className="mb-2 flex flex-wrap items-center justify-end gap-2 text-xs">
+                    <span className="text-muted-foreground">Drag mode 拖拽模式:</span>
+                    <div className="inline-flex overflow-hidden rounded-md border">
+                      <button
+                        onClick={() => setDropMode("move")}
+                        className={`px-2 py-1 ${dropMode === "move" ? "bg-primary text-primary-foreground" : "bg-card"}`}
+                      >
+                        Move 移动
+                      </button>
+                      <button
+                        onClick={() => setDropMode("add")}
+                        className={`border-l px-2 py-1 ${dropMode === "add" ? "bg-primary text-primary-foreground" : "bg-card"}`}
+                      >
+                        Add 可重复
+                      </button>
+                    </div>
+                  </div>
                   <div className="space-y-3">
                   {TIERS.map((t) => {
-                    const list = classStudents.filter((s) => tierOf(s) === t.id);
+                    const list = classStudents.filter((s) => tiersOf(s, activeSubject).includes(t.id));
                     const pct = counts.pct(t.id);
                     return (
                       <div key={t.id} className="flex justify-center">
@@ -422,18 +439,31 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
                               <p className="px-1 py-3 text-center text-xs opacity-70">Drag students here</p>
                             ) : (
                               <div className="flex flex-wrap gap-2">
-                                {list.map((s) => (
-                                  <button
-                                    key={s.id}
-                                    draggable
-                                    onDragStart={() => setDragId(s.id)}
-                                    onClick={() => setProfileId(s.id)}
-                                    className="group flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 text-sm text-card-foreground shadow-sm active:cursor-grabbing"
-                                  >
-                                    <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span className="font-medium">{s.name}</span>
-                                  </button>
-                                ))}
+                                {list.map((s) => {
+                                  const multi = tiersOf(s, activeSubject).length > 1;
+                                  return (
+                                    <div
+                                      key={s.id}
+                                      draggable
+                                      onDragStart={() => setDragId(s.id)}
+                                      className="group flex cursor-grab items-center gap-1.5 rounded-md border bg-card px-2 py-1 text-sm text-card-foreground shadow-sm active:cursor-grabbing"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                                      <button className="font-medium" onClick={() => setProfileId(s.id)}>
+                                        {s.name}
+                                      </button>
+                                      {multi && (
+                                        <button
+                                          title="Remove from this tier"
+                                          onClick={() => removeFromTier(s.id, t.id)}
+                                          className="text-muted-foreground hover:text-destructive"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
