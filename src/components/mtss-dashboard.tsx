@@ -183,7 +183,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
       doc.text(SUBJECT_LABEL[subj], 14, y);
       y += 7;
       (["tier3", "tier2", "tier1"] as Tier[]).forEach((t) => {
-        const list = classStudents.filter((s) => (s.tiers[subj] ?? "tier1") === t);
+        const list = classStudents.filter((s) => tiersOf(s, subj).includes(t));
         if (!list.length) return;
         if (y > 270) { doc.addPage(); y = 20; }
         doc.setFontSize(11);
