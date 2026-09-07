@@ -7,7 +7,8 @@ export type Student = {
   grade: number; // 1..8
   classId: string;
   advisor?: string;
-  tiers: Partial<Record<Subject, Tier>>;
+  // A subject can hold one tier, or several (e.g. both Tier 2 and Tier 3).
+  tiers: Partial<Record<Subject, Tier | Tier[]>>;
   concerns: string[];
   interventions: Intervention[];
   notes: Note[];
