@@ -145,18 +145,24 @@ export function StudentProfileDialog({
         <Section title="Subject support status">
           <div className="grid gap-3 sm:grid-cols-3">
             {subjects.map((subj) => {
-              const tier = draft.tiers[subj] ?? "tier1";
+              const current = tiersOf(draft, subj);
               return (
                 <div key={subj} className="rounded-lg border p-3">
                   <div className="mb-2 text-sm font-medium">{SUBJECT_LABEL[subj]}</div>
-                  <Select value={tier} onValueChange={(v) => setTier(subj, v as Tier)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tier1">{TIER_LABEL.tier1}</SelectItem>
-                      <SelectItem value="tier2">{TIER_LABEL.tier2}</SelectItem>
-                      <SelectItem value="tier3">{TIER_LABEL.tier3}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1.5">
+                    {(["tier1", "tier2", "tier3"] as Tier[]).map((t) => (
+                      <label key={t} className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={current.includes(t)}
+                          onCheckedChange={() => toggleTier(subj, t)}
+                        />
+                        {TIER_LABEL[t]}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Tier 2 / Tier 3 可同时勾选
+                  </p>
                 </div>
               );
             })}
