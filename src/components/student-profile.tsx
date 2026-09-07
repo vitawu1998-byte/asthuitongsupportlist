@@ -58,8 +58,13 @@ export function StudentProfileDialog({
   const subjects = subjectsFor(classInfo.band);
   const noteSubjects: NoteSubject[] = [...subjects, "other"];
 
-  const setTier = (subj: Subject, tier: Tier) =>
-    setDraft({ ...draft, tiers: { ...draft.tiers, [subj]: tier } });
+  const toggleTier = (subj: Subject, tier: Tier) =>
+    setDraft({
+      ...draft,
+      tiers: tiersOf(draft, subj).includes(tier)
+        ? withoutTier(draft, subj, tier)
+        : withTier(draft, subj, tier, "add"),
+    });
 
   const toggleConcern = (c: string) => {
     setDraft({
