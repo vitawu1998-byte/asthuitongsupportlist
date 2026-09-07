@@ -528,18 +528,18 @@ function Stat({ label, value, dot }: { label: string; value: React.ReactNode; do
 
 function StudentRow({
   student,
-  tier,
+  tiers,
   onDragStart,
   onClick,
 }: {
   student: Student;
-  tier: Tier;
+  tiers: Tier[];
   onDragStart: () => void;
   onClick: () => void;
 }) {
-  const tierTone =
-    tier === "tier1" ? "bg-tier1/15 text-tier1-foreground" :
-    tier === "tier2" ? "bg-tier2/25 text-tier2-foreground" :
+  const toneFor = (t: Tier) =>
+    t === "tier1" ? "bg-tier1/15 text-tier1-foreground" :
+    t === "tier2" ? "bg-tier2/25 text-tier2-foreground" :
     "bg-tier3/15 text-tier3";
   const overall = highestTier(student);
   return (
@@ -551,13 +551,15 @@ function StudentRow({
     >
       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
       <span className="flex-1 truncate font-medium">{student.name}</span>
-      <Badge variant="secondary" className={`text-[10px] ${tierTone}`}>
-        {tier === "tier1" ? "T1" : tier === "tier2" ? "T2" : "T3"}
-      </Badge>
+      {tiers.map((t) => (
+        <Badge key={t} variant="secondary" className={`text-[10px] ${toneFor(t)}`}>
+          {t === "tier1" ? "T1" : t === "tier2" ? "T2" : "T3"}
+        </Badge>
+      ))}
       {student.watch && (
         <Eye className="h-3 w-3 text-primary" />
       )}
-      {overall !== "tier1" && overall !== tier && (
+      {overall !== "tier1" && !tiers.includes(overall) && (
         <span
           className="h-1.5 w-1.5 rounded-full bg-destructive"
           title={`Also in ${overall === "tier3" ? "Tier 3" : "Tier 2"} for another subject`}
