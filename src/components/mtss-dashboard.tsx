@@ -49,6 +49,7 @@ export function MTSSDashboard({ classInfo }: { classInfo: ClassInfo }) {
   const [tierFilter, setTierFilter] = useState<"all" | Tier>("all");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overTier, setOverTier] = useState<Tier | null>(null);
+  const [dropMode, setDropMode] = useState<"move" | "add">("move");
   const [profileId, setProfileId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addText, setAddText] = useState("");
